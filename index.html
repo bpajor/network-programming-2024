@@ -80,8 +80,11 @@
             fetch('/post', {
                 method: 'POST',
                 body: new URLSearchParams(formData)
-            }).then(response => response.text())
-              .then(data => console.log(data));
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = "/confirm";
+                }
+            });
         }
 
         function sendPut(event) {
@@ -89,8 +92,11 @@
             const formData = new FormData(document.getElementById('putForm'));
             fetch('/put?' + new URLSearchParams(formData), {
                 method: 'PUT'
-            }).then(response => response.text())
-              .then(data => console.log(data));
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = "/confirm";
+                }
+            });
         }
 
         function sendDelete(event) {
@@ -98,8 +104,11 @@
             const formData = new FormData(document.getElementById('deleteForm'));
             fetch('/delete?' + new URLSearchParams(formData), {
                 method: 'DELETE'
-            }).then(response => response.text())
-              .then(data => console.log(data));
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = "/confirm";
+                }
+            });
         }
     </script>
 </body>
