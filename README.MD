@@ -1,1 +1,1 @@
-This is a project derivered for network programming course in 2024.
+This is a server-based project serving two static html pages derivered for network programming course in 2024.
