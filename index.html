@@ -55,15 +55,15 @@
         <div class="interactive">
             <button onclick="showMessage()">Click me!</button>
             <div id="message"></div>
-            <form method="POST" action="/post">
+            <form id="postForm" onsubmit="sendPost(event)">
                 <input type="text" name="data" placeholder="Enter data for POST">
                 <button type="submit">Send POST</button>
             </form>
-            <form method="PUT" action="/put">
+            <form id="putForm" onsubmit="sendPut(event)">
                 <input type="text" name="data" placeholder="Enter data for PUT">
                 <button type="submit">Send PUT</button>
             </form>
-            <form method="DELETE" action="/delete">
+            <form id="deleteForm" onsubmit="sendDelete(event)">
                 <input type="text" name="data" placeholder="Enter data for DELETE">
                 <button type="submit">Send DELETE</button>
             </form>
@@ -72,6 +72,34 @@
     <script>
         function showMessage() {
             document.getElementById('message').innerText = 'Hello, you clicked the button!';
+        }
+
+        function sendPost(event) {
+            event.preventDefault();
+            const formData = new FormData(document.getElementById('postForm'));
+            fetch('/post', {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            }).then(response => response.text())
+              .then(data => console.log(data));
+        }
+
+        function sendPut(event) {
+            event.preventDefault();
+            const formData = new FormData(document.getElementById('putForm'));
+            fetch('/put?' + new URLSearchParams(formData), {
+                method: 'PUT'
+            }).then(response => response.text())
+              .then(data => console.log(data));
+        }
+
+        function sendDelete(event) {
+            event.preventDefault();
+            const formData = new FormData(document.getElementById('deleteForm'));
+            fetch('/delete?' + new URLSearchParams(formData), {
+                method: 'DELETE'
+            }).then(response => response.text())
+              .then(data => console.log(data));
         }
     </script>
 </body>

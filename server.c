@@ -26,7 +26,12 @@ void handle_client(int client_socket) {
     char response[BUFFER_SIZE];
     memset(response, 0, BUFFER_SIZE);
 
-    if (strncmp(buffer, "GET / ", 6) == 0) {
+    // Parse the request line
+    char method[16], path[256], version[16];
+    sscanf(buffer, "%15s %255s %15s", method, path, version);
+
+    // Handle the GET request for the root path
+    if (strcmp(method, "GET") == 0 && strcmp(path, "/") == 0) {
         FILE *html_file = fopen("index.html", "r");
         if (html_file == NULL) {
             perror("fopen failed");
@@ -55,7 +60,7 @@ void handle_client(int client_socket) {
         send(client_socket, html_content, html_length, 0);
 
         free(html_content);
-    } else if (strncmp(buffer, "POST /post ", 11) == 0) {
+    } else if (strcmp(method, "POST") == 0 && strncmp(path, "/post", 5) == 0) {
         const char *response_body = "POST request received";
         snprintf(response, sizeof(response),
                  "HTTP/1.1 200 OK\r\n"
@@ -63,7 +68,8 @@ void handle_client(int client_socket) {
                  "Content-Length: %ld\r\n"
                  "\r\n%s",
                  strlen(response_body), response_body);
-    } else if (strncmp(buffer, "PUT /put ", 9) == 0) {
+        send(client_socket, response, strlen(response), 0);
+    } else if (strcmp(method, "PUT") == 0 && strncmp(path, "/put", 4) == 0) {
         const char *response_body = "PUT request received";
         snprintf(response, sizeof(response),
                  "HTTP/1.1 200 OK\r\n"
@@ -71,7 +77,8 @@ void handle_client(int client_socket) {
                  "Content-Length: %ld\r\n"
                  "\r\n%s",
                  strlen(response_body), response_body);
-    } else if (strncmp(buffer, "DELETE /delete ", 15) == 0) {
+        send(client_socket, response, strlen(response), 0);
+    } else if (strcmp(method, "DELETE") == 0 && strncmp(path, "/delete", 7) == 0) {
         const char *response_body = "DELETE request received";
         snprintf(response, sizeof(response),
                  "HTTP/1.1 200 OK\r\n"
@@ -79,6 +86,7 @@ void handle_client(int client_socket) {
                  "Content-Length: %ld\r\n"
                  "\r\n%s",
                  strlen(response_body), response_body);
+        send(client_socket, response, strlen(response), 0);
     } else {
         const char *response_404 = "HTTP/1.1 404 Not Found\r\n"
                                    "Content-Type: text/html\r\n"
@@ -86,10 +94,6 @@ void handle_client(int client_socket) {
                                    "\r\n"
                                    "<h1>404 Not Found</h1>";
         strncpy(response, response_404, sizeof(response));
-    }
-
-    // Wysłanie odpowiedzi do klienta, jeśli nie jest to GET / (bo GET / już wysłało zawartość)
-    if (strncmp(buffer, "GET / ", 6) != 0) {
         send(client_socket, response, strlen(response), 0);
     }
 
