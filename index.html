@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced HTTP Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #007BFF;
+        }
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+        }
+        .interactive {
+            margin-top: 20px;
+        }
+        .interactive button {
+            padding: 10px 20px;
+            font-size: 1em;
+            color: #fff;
+            background-color: #007BFF;
+            border: none;
+            cursor: pointer;
+        }
+        .interactive button:hover {
+            background-color: #0056b3;
+        }
+        .interactive form {
+            margin-top: 10px;
+        }
+        .interactive div {
+            margin-top: 10px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the Advanced HTTP Server!</h1>
+        <p>This is a simple static webpage served by a custom HTTP server in C.</p>
+        <div class="interactive">
+            <button onclick="showMessage()">Click me!</button>
+            <div id="message"></div>
+            <form method="POST" action="/post">
+                <input type="text" name="data" placeholder="Enter data for POST">
+                <button type="submit">Send POST</button>
+            </form>
+            <form method="PUT" action="/put">
+                <input type="text" name="data" placeholder="Enter data for PUT">
+                <button type="submit">Send PUT</button>
+            </form>
+            <form method="DELETE" action="/delete">
+                <input type="text" name="data" placeholder="Enter data for DELETE">
+                <button type="submit">Send DELETE</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        function showMessage() {
+            document.getElementById('message').innerText = 'Hello, you clicked the button!';
+        }
+    </script>
+</body>
+</html>
