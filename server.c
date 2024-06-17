@@ -7,6 +7,10 @@
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
+char last_method[16];
+char last_content[BUFFER_SIZE];
+char last_path[256];
+
 void send_confirmation_page(int client_socket) {
     FILE *html_file = fopen("confirm.html", "r");
     if (html_file == NULL) {
@@ -22,21 +26,89 @@ void send_confirmation_page(int client_socket) {
     html_content[html_length] = '\0';
     fclose(html_file);
 
+    // Replace {{PATH}} with the original path
+    char *path_placeholder = strstr(html_content, "{{PATH}}");
+    if (path_placeholder) {
+        char *new_html_content = malloc(strlen(html_content) + strlen(last_path) - strlen("{{PATH}}") + 1);
+        strncpy(new_html_content, html_content, path_placeholder - html_content);
+        new_html_content[path_placeholder - html_content] = '\0';
+        strcat(new_html_content, last_path);
+        strcat(new_html_content, path_placeholder + strlen("{{PATH}}"));
+        free(html_content);
+        html_content = new_html_content;
+    }
+
+    // Replace {{METHOD}} with actual HTTP method
+    char *method_placeholder = strstr(html_content, "{{METHOD}}");
+    if (method_placeholder) {
+        char *new_html_content = malloc(strlen(html_content) + strlen(last_method) - strlen("{{METHOD}}") + 1);
+        strncpy(new_html_content, html_content, method_placeholder - html_content);
+        new_html_content[method_placeholder - html_content] = '\0';
+        strcat(new_html_content, last_method);
+        strcat(new_html_content, method_placeholder + strlen("{{METHOD}}"));
+        free(html_content);
+        html_content = new_html_content;
+    }
+
+    // Replace {{CONTENT}} with actual content
+    char *content_placeholder = strstr(html_content, "{{CONTENT}}");
+    if (content_placeholder) {
+        char *new_html_content = malloc(strlen(html_content) + strlen(last_content) - strlen("{{CONTENT}}") + 1);
+        strncpy(new_html_content, html_content, content_placeholder - html_content);
+        new_html_content[content_placeholder - html_content] = '\0';
+        strcat(new_html_content, last_content);
+        strcat(new_html_content, content_placeholder + strlen("{{CONTENT}}"));
+        free(html_content);
+        html_content = new_html_content;
+    }
+
     char response[BUFFER_SIZE];
     snprintf(response, sizeof(response),
              "HTTP/1.1 200 OK\r\n"
              "Content-Type: text/html\r\n"
              "Content-Length: %ld\r\n"
              "\r\n",
-             html_length);
+             strlen(html_content));
 
     // Send the response headers
     send(client_socket, response, strlen(response), 0);
 
     // Send the HTML content
-    send(client_socket, html_content, html_length, 0);
+    send(client_socket, html_content, strlen(html_content), 0);
 
     free(html_content);
+}
+
+void send_file(int client_socket, const char *file_path, const char *content_type) {
+    FILE *file = fopen(file_path, "r");
+    if (file == NULL) {
+        perror("fopen failed");
+        return;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *file_content = malloc(file_length + 1);
+    fread(file_content, 1, file_length, file);
+    file_content[file_length] = '\0';
+    fclose(file);
+
+    char response[BUFFER_SIZE];
+    snprintf(response, sizeof(response),
+             "HTTP/1.1 200 OK\r\n"
+             "Content-Type: %s\r\n"
+             "Content-Length: %ld\r\n"
+             "\r\n",
+             content_type, file_length);
+
+    // Send the response headers
+    send(client_socket, response, strlen(response), 0);
+
+    // Send the file content
+    send(client_socket, file_content, file_length, 0);
+
+    free(file_content);
 }
 
 void handle_client(int client_socket) {
@@ -54,10 +126,6 @@ void handle_client(int client_socket) {
     // Log the received request
     printf("Received request:\n%s\n", buffer);
 
-    // Create the HTTP response
-    char response[BUFFER_SIZE];
-    memset(response, 0, BUFFER_SIZE);
-
     // Parse the request line
     char method[16], path[256], version[16];
     sscanf(buffer, "%15s %255s %15s", method, path, version);
@@ -66,42 +134,52 @@ void handle_client(int client_socket) {
     printf("Parsed path: %s\n", path);
     printf("Parsed version: %s\n", version);
 
+    char response[BUFFER_SIZE];
+
     // Handle the GET request for the root path
     if (strcmp(method, "GET") == 0 && strcmp(path, "/") == 0) {
-        FILE *html_file = fopen("index.html", "r");
-        if (html_file == NULL) {
-            perror("fopen failed");
-            return;
-        }
-
-        fseek(html_file, 0, SEEK_END);
-        long html_length = ftell(html_file);
-        fseek(html_file, 0, SEEK_SET);
-        char *html_content = malloc(html_length + 1);
-        fread(html_content, 1, html_length, html_file);
-        html_content[html_length] = '\0';
-        fclose(html_file);
-
-        snprintf(response, sizeof(response),
-                 "HTTP/1.1 200 OK\r\n"
-                 "Content-Type: text/html\r\n"
-                 "Content-Length: %ld\r\n"
-                 "\r\n",
-                 html_length);
-
-        // Send the response headers
-        send(client_socket, response, strlen(response), 0);
-
-        // Send the HTML content
-        send(client_socket, html_content, html_length, 0);
-
-        free(html_content);
+        send_file(client_socket, "index.html", "text/html");
     } else if (strcmp(method, "GET") == 0 && strcmp(path, "/confirm") == 0) {
         send_confirmation_page(client_socket);
+    } else if (strcmp(method, "GET") == 0 && strcmp(path, "/scripts.js") == 0) {
+        send_file(client_socket, "scripts.js", "application/javascript");
     } else if ((strcmp(method, "POST") == 0 && strncmp(path, "/post", 5) == 0) ||
                (strcmp(method, "PUT") == 0 && strncmp(path, "/put", 4) == 0) ||
                (strcmp(method, "DELETE") == 0 && strncmp(path, "/delete", 7) == 0)) {
-        send_confirmation_page(client_socket);
+        // Get the content of the POST/PUT/DELETE request
+        char *content = strstr(buffer, "\r\n\r\n");
+        if (content) {
+            content += 4; // Move past "\r\n\r\n"
+        } else {
+            content = "";
+        }
+
+        // Read additional content if any
+        int content_length = 0;
+        char *content_length_str = strstr(buffer, "Content-Length:");
+        if (content_length_str) {
+            sscanf(content_length_str, "Content-Length: %d", &content_length);
+            if (content_length > 0) {
+                char *body_start = strstr(content, "\r\n\r\n");
+                if (body_start) {
+                    body_start += 4; // Move past "\r\n\r\n"
+                    strncpy(last_content, body_start, content_length);
+                    last_content[content_length] = '\0';
+                }
+            }
+        }
+
+        // Store details in global variables
+        strncpy(last_method, method, sizeof(last_method));
+        strncpy(last_path, path, sizeof(last_path));
+        strncpy(last_content, content, sizeof(last_content));
+
+        // Send a redirect to /confirm
+        snprintf(response, sizeof(response),
+                 "HTTP/1.1 302 Found\r\n"
+                 "Location: /confirm\r\n"
+                 "\r\n");
+        send(client_socket, response, strlen(response), 0);
     } else {
         const char *response_404 = "HTTP/1.1 404 Not Found\r\n"
                                    "Content-Type: text/html\r\n"
